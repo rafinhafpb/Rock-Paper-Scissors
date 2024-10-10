@@ -4,6 +4,7 @@ import random
 from collections import deque
 import statistics as st
 import numpy as np
+import math
 
 
 def calculate_winner(cpu_choice, player_choice):
@@ -34,65 +35,67 @@ def calculate_winner(cpu_choice, player_choice):
     elif player_choice == "Paper" and cpu_choice == "Scissors":
         return "CPU wins!"
 
+def calculate_angle(a, b, c):
+    # a, b, c are points (x, y)
+    ab = np.array([b[0] - a[0], b[1] - a[1]])
+    bc = np.array([c[0] - b[0], c[1] - b[1]])
+    
+    cos_angle = np.dot(ab, bc) / (np.linalg.norm(ab) * np.linalg.norm(bc))
+    angle = np.arccos(cos_angle)
 
-def compute_fingers(hand_landmarks, count):
+    return np.degrees(angle)
 
-    # Coordinates are used to determine whether a finger is being held up or not
-    # This is done by detemining whether the tip of the finger is above or below the base of the finger
-    # For the thumb it determines whether the tip is to the left or right (depending on whether it's their right or left hand)
-
-    # Index Finger
-    if hand_landmarks[8][2] < hand_landmarks[6][2]:
-        count += 1
-
-    # Middle Finger
-    if hand_landmarks[12][2] < hand_landmarks[10][2]:
-        count += 1
-
-    # Ring Finger
-    if hand_landmarks[16][2] < hand_landmarks[14][2]:
-        count += 1
-
-    # Pinky Finger
-    if hand_landmarks[20][2] < hand_landmarks[18][2]:
-        count += 1
-
-    # Thumb
-    if hand_landmarks[4][3] == "Left" and hand_landmarks[4][1] > hand_landmarks[3][1]:
-        count += 1
-    elif hand_landmarks[4][3] == "Right" and hand_landmarks[4][1] < hand_landmarks[3][1]:
-        count += 1
-    return count
-
-def compute_fingers_2(hand_landmarks, count):
+def compute_fingers(hand_landmarks):
 
     # Coordinates are used to determine whether a finger is being held up or not
     # This is done by detemining wheter the distance between wrist and finger tip is greater than the distance between wrist and finger base
-    # For the thumb it determines ?
+    # For the thumb it determines rather the angle between the tip and the base is greater than a treshold
+
+    fingers_up = np.zeros(5)
 
     # Index Finger
-    if np.linalg.norm(((hand_landmarks[0][1], hand_landmarks[0][2]), (hand_landmarks[8][1], hand_landmarks[8][2]))) > np.linalg.norm(((hand_landmarks[0][1], hand_landmarks[0][2]), (hand_landmarks[5][1], hand_landmarks[5][2]))):
-        count += 1
+    if math.dist((hand_landmarks[0][1], hand_landmarks[0][2]), (hand_landmarks[8][1], hand_landmarks[8][2])) > math.dist((hand_landmarks[0][1], hand_landmarks[0][2]), (hand_landmarks[5][1], hand_landmarks[5][2])):
+        fingers_up[1] = 1
+    else:
+        fingers_up[1] = 0
 
     # Middle Finger
-    if np.linalg.norm(((hand_landmarks[0][1], hand_landmarks[0][2]), (hand_landmarks[12][1], hand_landmarks[12][2]))) > np.linalg.norm(((hand_landmarks[0][1], hand_landmarks[0][2]), (hand_landmarks[9][1], hand_landmarks[9][2]))):
-        count += 1
+    if math.dist((hand_landmarks[0][1], hand_landmarks[0][2]), (hand_landmarks[12][1], hand_landmarks[12][2])) > math.dist((hand_landmarks[0][1], hand_landmarks[0][2]), (hand_landmarks[9][1], hand_landmarks[9][2])):
+        fingers_up[2] = 1
+    else:
+        fingers_up[2] = 0
 
     # Ring Finger
-    if np.linalg.norm(((hand_landmarks[0][1], hand_landmarks[0][2]), (hand_landmarks[16][1], hand_landmarks[16][2]))) > np.linalg.norm(((hand_landmarks[0][1], hand_landmarks[0][2]), (hand_landmarks[13][1], hand_landmarks[13][2]))):
-        count += 1
+    if math.dist((hand_landmarks[0][1], hand_landmarks[0][2]), (hand_landmarks[16][1], hand_landmarks[16][2])) > math.dist((hand_landmarks[0][1], hand_landmarks[0][2]), (hand_landmarks[13][1], hand_landmarks[13][2])):
+        fingers_up[3] = 1
+    else:
+        fingers_up[3] = 0
 
     # Pinky Finger
-    if np.linalg.norm(((hand_landmarks[0][1], hand_landmarks[0][2]), (hand_landmarks[20][1], hand_landmarks[20][2]))) > np.linalg.norm(((hand_landmarks[0][1], hand_landmarks[0][2]), (hand_landmarks[17][1], hand_landmarks[17][2]))):
-        count += 1
+    if math.dist((hand_landmarks[0][1], hand_landmarks[0][2]), (hand_landmarks[20][1], hand_landmarks[20][2])) > math.dist((hand_landmarks[0][1], hand_landmarks[0][2]), (hand_landmarks[17][1], hand_landmarks[17][2])):
+        fingers_up[4] = 1
+    else:
+        fingers_up[4] = 0
 
     # Thumb
-    if hand_landmarks[4][3] == "Left" and hand_landmarks[4][1] > hand_landmarks[3][1]:
-        count += 1
-    elif hand_landmarks[4][3] == "Right" and hand_landmarks[4][1] < hand_landmarks[3][1]:
-        count += 1
-    return count
+    angle = calculate_angle((hand_landmarks[2][1], hand_landmarks[2][2]), (hand_landmarks[3][1], hand_landmarks[3][2]), (hand_landmarks[4][1], hand_landmarks[4][2]))
+    if angle < 30:
+        fingers_up[0] = 1
+    else:
+        fingers_up[0] = 0
 
+    return fingers_up
+
+def display_values(fingers_up):
+    if np.array_equal(fingers_up, np.array([0, 0, 0, 0, 0])) or np.array_equal(fingers_up, np.array([1, 0, 0, 0, 0])):
+        result = "Rock"
+    elif np.array_equal(fingers_up, np.array([0, 1, 1, 0, 0])) or np.array_equal(fingers_up, np.array([1, 1, 1, 0, 0])):
+        result = "Scissors"
+    elif np.array_equal(fingers_up, np.array([1, 1, 1, 1, 1])):
+        result = "Paper"
+    else:
+        result = "Invalid"
+    return result
 
 # Loading in from mediapipe
 mp_drawing = mp.solutions.drawing_utils
@@ -102,13 +105,15 @@ mp_hands = mp.solutions.hands
 # Using OpenCV to capture from the webcam
 webcam = cv2.VideoCapture(0)
 
+cv2.namedWindow("Rock, Paper, Scissors", cv2.WND_PROP_FULLSCREEN)
+cv2.setWindowProperty("Rock, Paper, Scissors", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+
 cpu_choices = ["Rock", "Paper", "Scissors"]
 cpu_choice = "Nothing"
 cpu_score, player_score = 0, 0
 winner_colour = (0, 255, 0)
 player_choice = "Nothing"
 hand_valid = False
-display_values = ["Rock", "Invalid", "Scissors", "Invalid", "Invalid", "Paper"]
 winner = "None"
 de = deque(['Nothing'] * 5, maxlen=5)
 
@@ -135,7 +140,7 @@ with mp_hands.Hands(
         handNumber = 0
         hand_landmarks = []
         isCounting = False
-        count = 0
+        fingers = np.zeros(5)
 
         # If at least one hand is detected this will execute.
         if results.multi_hand_landmarks:
@@ -178,16 +183,15 @@ with mp_hands.Hands(
                     hand_landmarks.append([id, xPos, yPos, label])
 
                 # Number of fingers held up are counted.
-                count = compute_fingers_2(hand_landmarks, count)
+                fingers = compute_fingers(hand_landmarks)
 
                 handNumber += 1
         else:
             hand_valid = False
 
         # The number of fingers being held up is used to determine which move is made by the player
-        print(count)
-        if isCounting and count <= 5:
-            player_choice = display_values[count]
+        if isCounting and sum(fingers) <= 5:
+            player_choice = display_values(fingers)
         elif isCounting:
             player_choice = "Invalid"
         else:
@@ -205,25 +209,25 @@ with mp_hands.Hands(
 
         # Overlaying text on the webcam input to convey the score, move and round winner.
         cv2.putText(image, "You", (90, 75),
-                    cv2.FONT_HERSHEY_DUPLEX, 2, (255, 0, 0), 5)
+                    cv2.FONT_HERSHEY_DUPLEX, 1, (255, 0, 0), 2)
 
-        cv2.putText(image, "CPU", (1050, 75),
-                    cv2.FONT_HERSHEY_DUPLEX, 2, (0, 0, 255), 5)
+        cv2.putText(image, "CPU", (375, 75),
+                    cv2.FONT_HERSHEY_DUPLEX, 1, (0, 0, 255), 2)
 
         cv2.putText(image, player_choice, (45, 375),
-                    cv2.FONT_HERSHEY_DUPLEX, 2, (255, 0, 0), 5)
+                    cv2.FONT_HERSHEY_DUPLEX, 1, (255, 0, 0), 2)
 
-        cv2.putText(image, cpu_choice, (1000, 375),
-                    cv2.FONT_HERSHEY_DUPLEX, 2, (0, 0, 255), 5)
+        cv2.putText(image, cpu_choice, (375, 375),
+                    cv2.FONT_HERSHEY_DUPLEX, 1, (0, 0, 255), 2)
 
-        cv2.putText(image, winner, (530, 650),
-                    cv2.FONT_HERSHEY_DUPLEX, 2, winner_colour, 5)
+        cv2.putText(image, winner, (200, 200),
+                    cv2.FONT_HERSHEY_DUPLEX, 1, winner_colour, 2)
 
         cv2.putText(image, str(player_score), (145, 200),
-                    cv2.FONT_HERSHEY_DUPLEX, 2, (255, 0, 0), 5)
+                    cv2.FONT_HERSHEY_DUPLEX, 1, (255, 0, 0), 2)
 
-        cv2.putText(image, str(cpu_score), (1100, 200),
-                    cv2.FONT_HERSHEY_DUPLEX, 2, (0, 0, 255), 5)
+        cv2.putText(image, str(cpu_score), (375, 200),
+                    cv2.FONT_HERSHEY_DUPLEX, 1, (0, 0, 255), 2)
 
         cv2.imshow('Rock, Paper, Scissors', image)
 
