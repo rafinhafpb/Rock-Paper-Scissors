@@ -3,6 +3,7 @@ import mediapipe as mp
 import random
 from collections import deque
 import statistics as st
+import numpy as np
 
 
 def calculate_winner(cpu_choice, player_choice):
@@ -54,6 +55,35 @@ def compute_fingers(hand_landmarks, count):
 
     # Pinky Finger
     if hand_landmarks[20][2] < hand_landmarks[18][2]:
+        count += 1
+
+    # Thumb
+    if hand_landmarks[4][3] == "Left" and hand_landmarks[4][1] > hand_landmarks[3][1]:
+        count += 1
+    elif hand_landmarks[4][3] == "Right" and hand_landmarks[4][1] < hand_landmarks[3][1]:
+        count += 1
+    return count
+
+def compute_fingers_2(hand_landmarks, count):
+
+    # Coordinates are used to determine whether a finger is being held up or not
+    # This is done by detemining wheter the distance between wrist and finger tip is greater than the distance between wrist and finger base
+    # For the thumb it determines ?
+
+    # Index Finger
+    if np.linalg.norm(((hand_landmarks[0][1], hand_landmarks[0][2]), (hand_landmarks[8][1], hand_landmarks[8][2]))) > np.linalg.norm(((hand_landmarks[0][1], hand_landmarks[0][2]), (hand_landmarks[5][1], hand_landmarks[5][2]))):
+        count += 1
+
+    # Middle Finger
+    if np.linalg.norm(((hand_landmarks[0][1], hand_landmarks[0][2]), (hand_landmarks[12][1], hand_landmarks[12][2]))) > np.linalg.norm(((hand_landmarks[0][1], hand_landmarks[0][2]), (hand_landmarks[9][1], hand_landmarks[9][2]))):
+        count += 1
+
+    # Ring Finger
+    if np.linalg.norm(((hand_landmarks[0][1], hand_landmarks[0][2]), (hand_landmarks[16][1], hand_landmarks[16][2]))) > np.linalg.norm(((hand_landmarks[0][1], hand_landmarks[0][2]), (hand_landmarks[13][1], hand_landmarks[13][2]))):
+        count += 1
+
+    # Pinky Finger
+    if np.linalg.norm(((hand_landmarks[0][1], hand_landmarks[0][2]), (hand_landmarks[20][1], hand_landmarks[20][2]))) > np.linalg.norm(((hand_landmarks[0][1], hand_landmarks[0][2]), (hand_landmarks[17][1], hand_landmarks[17][2]))):
         count += 1
 
     # Thumb
@@ -143,19 +173,19 @@ with mp_hands.Hands(
                 # Converts unit-less hand landmarks into pixel counts
                 for id, landmark in enumerate(hand.landmark):
                     imgH, imgW, imgC = image.shape
-                    xPos, yPos = int(landmark.x *
-                                     imgW), int(landmark.y * imgH)
+                    xPos, yPos = int(landmark.x * imgW), int(landmark.y * imgH)
 
                     hand_landmarks.append([id, xPos, yPos, label])
 
                 # Number of fingers held up are counted.
-                count = compute_fingers(hand_landmarks, count)
+                count = compute_fingers_2(hand_landmarks, count)
 
                 handNumber += 1
         else:
             hand_valid = False
 
         # The number of fingers being held up is used to determine which move is made by the player
+        print(count)
         if isCounting and count <= 5:
             player_choice = display_values[count]
         elif isCounting:
