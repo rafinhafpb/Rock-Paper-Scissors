@@ -1,5 +1,6 @@
 import numpy as np
 import math
+import time
 
 norm = np.linalg.norm(((0, 0), (0, 2))) > np.linalg.norm(((0, 0), (0, 1)))
 
@@ -21,7 +22,19 @@ def calculate_angle(p1, p2, p3):
 
     return angle
 
-a = np.array([0, 0, 1, 0, 0])
+# Example initialization
+player_choice = "Some choice"
+hand_valid = False
 
-if a.all() == np.array([0, 0, 1, 0, 0]):
-    print("beaebrerb")
+while True:
+    # This block will run only once when the condition is met
+    if player_choice != "Nothing" and not hand_valid:
+        current_time = time.time()  # Set current time only once
+        hand_valid = True  # Prevent resetting current_time in future iterations
+
+    # Print the elapsed time since current_time was set
+    print(f"{time.time() - current_time:.3f}")
+    
+    # Simulate stopping after 5 seconds (optional, just for demonstration)
+    if time.time() - current_time > 5:
+        break

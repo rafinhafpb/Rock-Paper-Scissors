@@ -5,6 +5,7 @@ from collections import deque
 import statistics as st
 import numpy as np
 import math
+import time
 
 
 def calculate_winner(cpu_choice, player_choice):
@@ -87,14 +88,26 @@ def compute_fingers(hand_landmarks):
     return fingers_up
 
 def display_values(fingers_up):
+    # Check if no fingers are up (regardless of the thumb)
     if np.array_equal(fingers_up, np.array([0, 0, 0, 0, 0])) or np.array_equal(fingers_up, np.array([1, 0, 0, 0, 0])):
         result = "Rock"
+    # Check if index and middle finger are up (regardless of the thumb)
     elif np.array_equal(fingers_up, np.array([0, 1, 1, 0, 0])) or np.array_equal(fingers_up, np.array([1, 1, 1, 0, 0])):
         result = "Scissors"
+    # Check if all the fingers are up, thumb included
     elif np.array_equal(fingers_up, np.array([1, 1, 1, 1, 1])):
         result = "Paper"
     else:
         result = "Invalid"
+    return result
+
+def oposite_value(option):
+    if option == "Rock":
+        result = "Paper"
+    elif option == "Paper":
+        result = "Scissors"
+    elif option == "Scissors":
+        result = "Rock"
     return result
 
 # Loading in from mediapipe
@@ -105,8 +118,8 @@ mp_hands = mp.solutions.hands
 # Using OpenCV to capture from the webcam
 webcam = cv2.VideoCapture(0)
 
-cv2.namedWindow("Rock, Paper, Scissors", cv2.WND_PROP_FULLSCREEN)
-cv2.setWindowProperty("Rock, Paper, Scissors", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+#cv2.namedWindow("Rock, Paper, Scissors", cv2.WND_PROP_FULLSCREEN)
+#cv2.setWindowProperty("Rock, Paper, Scissors", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
 cpu_choices = ["Rock", "Paper", "Scissors"]
 cpu_choice = "Nothing"
@@ -114,6 +127,7 @@ cpu_score, player_score = 0, 0
 winner_colour = (0, 255, 0)
 player_choice = "Nothing"
 hand_valid = False
+current_time = 1000
 winner = "None"
 de = deque(['Nothing'] * 5, maxlen=5)
 
@@ -144,13 +158,16 @@ with mp_hands.Hands(
 
         # If at least one hand is detected this will execute.
         if results.multi_hand_landmarks:
+            # hand_valid acts as a flag to not reset current_time
+            if not hand_valid:
+                current_time = time.time()
+                hand_valid = True
+    
             isCounting = True
 
-            # hand_valid acts as a flag so that the CPU does not "play" a move multiple times.
-            if player_choice != "Nothing" and not hand_valid:
-
-                hand_valid = True
+            if player_choice != "Nothing" and time.time()-current_time >= 3:
                 cpu_choice = random.choice(cpu_choices)
+                #cpu_choice = oposite_value(player_choice)
                 winner = calculate_winner(cpu_choice, player_choice)
 
                 # Incrementing scores of player or CPU
@@ -162,6 +179,8 @@ with mp_hands.Hands(
                     winner_colour = (0, 0, 255)
                 elif winner == "Invalid!" or winner == "Tie!":
                     winner_colour = (0, 255, 0)
+                
+                hand_valid = False
 
             # Drawing the hand skeletons
             for hand in results.multi_hand_landmarks:
@@ -186,8 +205,9 @@ with mp_hands.Hands(
                 fingers = compute_fingers(hand_landmarks)
 
                 handNumber += 1
+
         else:
-            hand_valid = False
+            current_time = time.time()
 
         # The number of fingers being held up is used to determine which move is made by the player
         if isCounting and sum(fingers) <= 5:
@@ -228,6 +248,9 @@ with mp_hands.Hands(
 
         cv2.putText(image, str(cpu_score), (375, 200),
                     cv2.FONT_HERSHEY_DUPLEX, 1, (0, 0, 255), 2)
+        
+        cv2.putText(image, f"{time.time()-current_time:.2f}", (250, 30),
+                            cv2.FONT_HERSHEY_DUPLEX, 1, (255, 0, 0), 2)
 
         cv2.imshow('Rock, Paper, Scissors', image)
 
