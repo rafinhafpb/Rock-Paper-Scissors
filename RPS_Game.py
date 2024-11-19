@@ -143,6 +143,7 @@ def send_msg(msg):
     client_socket.sendall(msg.encode('utf-8'))
     data = client_socket.recv(1024)
     print("server response: ", data.decode('utf-8'))
+    return 
 
 with mp_hands.Hands(
         model_complexity=0,
