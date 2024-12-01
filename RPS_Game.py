@@ -6,7 +6,6 @@ import statistics as st
 import numpy as np
 import math
 import time
-import socket
 
 
 def calculate_winner(cpu_choice, player_choice):
@@ -117,7 +116,7 @@ mp_drawing_styles = mp.solutions.drawing_styles
 mp_hands = mp.solutions.hands
 
 # Using OpenCV to capture from the webcam
-webcam = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+webcam = cv2.VideoCapture(0)
 
 #cv2.namedWindow("Rock, Paper, Scissors", cv2.WND_PROP_FULLSCREEN)
 #cv2.setWindowProperty("Rock, Paper, Scissors", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
@@ -131,19 +130,6 @@ hand_valid = False
 current_time = 1000
 winner = "None"
 de = deque(['Nothing'] * 5, maxlen=5)
-
-# comunication
-host = '127.0.0.1'
-port = 65432
-
-client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client_socket.connect((host, port))
-
-def send_msg(msg):
-    client_socket.sendall(msg.encode('utf-8'))
-    data = client_socket.recv(1024)
-    print("server response: ", data.decode('utf-8'))
-    return 
 
 with mp_hands.Hands(
         model_complexity=0,
@@ -175,14 +161,12 @@ with mp_hands.Hands(
             # hand_valid acts as a flag to not reset current_time
             if not hand_valid:
                 current_time = time.time()
-                send_msg("wait_command")
                 hand_valid = True
     
             isCounting = True
 
-            if player_choice != "Nothing" and time.time()-current_time >= 5:
+            if player_choice != "Nothing" and time.time()-current_time >= 3:
                 cpu_choice = random.choice(cpu_choices)
-                send_msg(cpu_choice)
                 #cpu_choice = oposite_value(player_choice)
                 winner = calculate_winner(cpu_choice, player_choice)
 
