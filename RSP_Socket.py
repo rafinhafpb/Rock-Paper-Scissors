@@ -103,12 +103,14 @@ def display_values(fingers_up):
    return result
 
 def oposite_value(option):
-   if option == "Rock":
+   if option == "Rock" :
        result = 3
    elif option == "Paper":
        result = 1
    elif option == "Scissors":
        result = 2
+   else: result = 1
+
    return result
 
 # Loading in from mediapipe
@@ -117,12 +119,12 @@ mp_drawing_styles = mp.solutions.drawing_styles
 mp_hands = mp.solutions.hands
 
 # Using OpenCV to capture from the webcam
-webcam = cv2.VideoCapture(0)
+webcam = cv2.VideoCapture(2)
 
 #cv2.namedWindow("Rock, Paper, Scissors", cv2.WND_PROP_FULLSCREEN)
 #cv2.setWindowProperty("Rock, Paper, Scissors", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
-cpu_choices = ["Rock", "Paper", "Scissors"]
+cpu_choices = ["Scissors", "Rock", "Paper"]
 cpu_choice = "Nothing"
 cpu_score, player_score = 0, 0
 winner_colour = (0, 255, 0)
@@ -138,8 +140,20 @@ def send_command_to_socket(command, host='localhost', port=65432):
             s.connect((host, port))
             s.sendall(str(command).encode())
             print(f"Sent command: {command}")
+            #data= connect.recv(1024)
     except Exception as e:
         print(f"Failed to send command: {e}")
+
+def decode_choice(choice):
+      if(choice == 1):
+       result = "Scissors"
+      elif(choice == 2):
+       result = "Rock"
+      elif(choice == 3):
+       result = "Paper"
+      else:
+       result = "Nothing"
+      return result
 
 # def send_msg(msg):
 #    client_socket.sendall(msg.encode('utf-8')) # type: ignore
@@ -181,10 +195,11 @@ with mp_hands.Hands(
    
            isCounting = True
 
-           if player_choice != "Nothing" and time.time()-current_time >= 5:
+           if player_choice != "Nothing" and time.time()-current_time >= 3:
                # cpu_choice = random.choice(cpu_choices)
                cpu_choice = oposite_value(player_choice)
                send_command_to_socket(cpu_choice)
+               time.sleep(3)
                
                winner = calculate_winner(cpu_choice, player_choice)
 
@@ -199,6 +214,7 @@ with mp_hands.Hands(
                    winner_colour = (0, 255, 0)
                
                hand_valid = False
+
 
            # Drawing the hand skeletons
            for hand in results.multi_hand_landmarks:
@@ -223,6 +239,8 @@ with mp_hands.Hands(
                fingers = compute_fingers(hand_landmarks)
 
                handNumber += 1
+               #time.sleep(2)
+
 
        else:
            current_time = time.time()
@@ -244,31 +262,7 @@ with mp_hands.Hands(
        except st.StatisticsError:
            print("Stats Error")
            continue
-
-       # Overlaying text on the webcam input to convey the score, move and round winner.
-       cv2.putText(image, "You", (90, 75),
-                   cv2.FONT_HERSHEY_DUPLEX, 1, (255, 0, 0), 2)
-
-       cv2.putText(image, "CPU", (375, 75),
-                   cv2.FONT_HERSHEY_DUPLEX, 1, (0, 0, 255), 2)
-
-       cv2.putText(image, player_choice, (45, 375),
-                   cv2.FONT_HERSHEY_DUPLEX, 1, (255, 0, 0), 2)
-
-       cv2.putText(image, cpu_choice, (375, 375),
-                   cv2.FONT_HERSHEY_DUPLEX, 1, (0, 0, 255), 2)
-
-       cv2.putText(image, winner, (200, 200),
-                   cv2.FONT_HERSHEY_DUPLEX, 1, winner_colour, 2)
-
-       cv2.putText(image, str(player_score), (145, 200),
-                   cv2.FONT_HERSHEY_DUPLEX, 1, (255, 0, 0), 2)
-
-       cv2.putText(image, str(cpu_score), (375, 200),
-                   cv2.FONT_HERSHEY_DUPLEX, 1, (0, 0, 255), 2)
        
-       cv2.putText(image, f"{time.time()-current_time:.2f}", (250, 30),
-                           cv2.FONT_HERSHEY_DUPLEX, 1, (255, 0, 0), 2)
 
        cv2.imshow('Rock, Paper, Scissors', image)
 
